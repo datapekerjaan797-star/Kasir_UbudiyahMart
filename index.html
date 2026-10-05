@@ -95,6 +95,7 @@ tr:hover td{background:var(--blue-lt)}
 .badge-red{background:var(--red-lt);color:var(--red-brand); border:1px solid #fecaca;}
 .badge-blue{background:var(--blue-lt);color:var(--blue-brand); border:1px solid #bfdbfe;}
 .badge-yellow{background:var(--yellow-lt);color:#a16207; border:1px solid #fef08a;}
+.expiry-cell{min-width:145px}.expiry-main{font-weight:800;font-size:12px}.expiry-sub{font-size:10px;margin-top:3px;font-weight:700}.expiry-summary{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.expiry-summary .badge{font-size:10px}.expiry-monitor-table td{vertical-align:middle}.expiry-empty{padding:24px;text-align:center;color:var(--txtm);font-weight:600;}
 
 /* COMMUNICATIVE DASHBOARD */
 .dash-banner {background: linear-gradient(135deg, var(--blue-brand), var(--blue-dk)); border-radius: var(--rad-lg); padding: 24px; color: white; margin-bottom: 24px; box-shadow: var(--sha); position: relative; overflow: hidden; display:flex; align-items:center; gap: 20px;}
@@ -235,7 +236,7 @@ tr:hover td{background:var(--blue-lt)}
         <div class="login-content">
             <div class="login-logo">
                 <div class="login-logo-space">
-                    <img src="UMart_Logo.png" alt="UMart" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <img src="assets/UMart_Logo.png" alt="UMart" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                     <div class="login-logo-fallback">UMART</div>
                 </div>
             </div>
@@ -261,7 +262,7 @@ tr:hover td{background:var(--blue-lt)}
         <div class="sidebar-header" title="Ubudiyah Mart">
             <img
                 id="brand-logo"
-                src="UMart_Logo.png"
+                src="assets/UMart_Logo.png"
                 alt="UMart"
                 style="display:block; max-width:170px; max-height:46px; width:auto; height:auto; object-fit:contain;"
                 onerror="this.style.display='none'; document.getElementById('brand-logo-fallback').style.display='block';"
@@ -359,6 +360,36 @@ tr:hover td{background:var(--blue-lt)}
                             <h4>Member Aktif</h4>
                             <p id="dash-member-count">0</p>
                         </div>
+                    </div>
+                    <div class="d-card red">
+                        <div class="d-icon">⏳</div>
+                        <div class="d-info">
+                            <h4>Expired / Segera Expired</h4>
+                            <p id="dash-expiry-count" style="color:var(--red-brand)">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom:24px;">
+                    <div class="panel-title">
+                        Monitoring Masa Expired Produk
+                        <button class="btn btn-sm btn-outline" onclick="switchView('produk')">Kelola Produk</button>
+                    </div>
+                    <div id="dash-expiry-summary" class="expiry-summary"></div>
+                    <div class="table-wrap" style="margin-top:14px;">
+                        <table class="expiry-monitor-table">
+                            <thead>
+                                <tr>
+                                    <th>Produk</th>
+                                    <th>Kategori</th>
+                                    <th class="text-center">Stok</th>
+                                    <th class="text-center">Tanggal Expired</th>
+                                    <th class="text-center">Aging</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-expiry-tbody"></tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -493,7 +524,16 @@ tr:hover td{background:var(--blue-lt)}
                     </div>
                     <div class="action-bar">
                         <input type="text" id="search-produk" class="input" placeholder="Ketik Kode Barcode atau Nama Produk..." oninput="renderProducts()" style="max-width:350px; border-color:var(--blue-brand);">
+                        <select id="filter-expiry-produk" class="input" onchange="renderProducts()" style="max-width:220px; border-color:var(--blue-brand);">
+                            <option value="all">Semua Status Expired</option>
+                            <option value="critical">Kritis ≤ 7 Hari</option>
+                            <option value="warning">Akan Expired</option>
+                            <option value="expired">Sudah Expired</option>
+                            <option value="safe">Masih Aman</option>
+                            <option value="unset">Belum Diatur</option>
+                        </select>
                     </div>
+                    <div id="produk-expiry-summary" class="expiry-summary" style="margin-bottom:16px;"></div>
                     <div class="table-wrap">
                         <table>
                             <thead>
@@ -504,6 +544,7 @@ tr:hover td{background:var(--blue-lt)}
                                     <th class="text-right">Harga Beli (HPP)</th>
                                     <th class="text-right">Harga Jual Toko</th>
                                     <th class="text-center">Sisa Stok Fisik</th>
+                                    <th class="text-center">Masa Expired / Aging</th>
                                     <th class="text-center">Aksi Setup</th>
                                 </tr>
                             </thead>
@@ -782,6 +823,18 @@ tr:hover td{background:var(--blue-lt)}
                     <div class="col form-group">
                         <label>Batas Peringatan Habis (Alert) *</label>
                         <input type="number" id="p-min-stock" class="input" required min="0" value="5">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col form-group">
+                        <label>Tanggal Expired</label>
+                        <input type="date" id="p-expiry-date" class="input">
+                        <small style="color:var(--txtm);font-weight:600;">Kosongkan jika produk tidak memiliki masa expired.</small>
+                    </div>
+                    <div class="col form-group">
+                        <label>Batas Warning Expired (Hari)</label>
+                        <input type="number" id="p-expiry-alert-days" class="input" min="1" value="30" placeholder="30">
+                        <small style="color:var(--txtm);font-weight:600;">Sistem mulai memberi warning saat sisa hari ≤ angka ini.</small>
                     </div>
                 </div>
             </div>
@@ -1175,7 +1228,7 @@ function switchView(viewId, navEl) {
     }
     if(viewId === 'laporan') { initLaporan(); renderLaporan(); }
     if(viewId === 'akuntansi') { initAkuntansi(); renderAkuntansi(); }
-    if(viewId === 'dashboard') { renderDashboard(); refreshDashboardFromSheet(); }
+    if(viewId === 'dashboard') { renderDashboard(); refreshDashboardFromSheet(); renderDashboardExpiry(); }
     if(viewId === 'pengaturan') { 
         renderQrisSetting(); 
         renderUsers(); 
@@ -1309,23 +1362,121 @@ function factoryReset() {
 }
 
 // ══════════════════════════════════════════
+//  EXPIRY / AGING MANAGEMENT
+// ══════════════════════════════════════════
+function localDateOnly(value) {
+    if (!value) return null;
+    const s = String(value).trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function formatDateOnly(value) {
+    const d = localDateOnly(value);
+    if (!d) return '-';
+    return d.toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
+}
+
+function expiryInfo(product, refDate = new Date()) {
+    const expiry = localDateOnly(product.expiryDate);
+    if (!expiry) return { hasExpiry:false, status:'unset', daysLeft:null, label:'Belum diatur', dateLabel:'-' };
+
+    const today = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate());
+    const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / 86400000);
+    const alertDays = Math.max(1, Number(product.expiryAlertDays) || 30);
+
+    if (daysLeft < 0) {
+        const age = Math.abs(daysLeft);
+        return { hasExpiry:true, status:'expired', daysLeft, alertDays, dateLabel:formatDateOnly(product.expiryDate), label:`Expired ${age} hari`, rank:0 };
+    }
+    if (daysLeft <= 7) {
+        return { hasExpiry:true, status:'critical', daysLeft, alertDays, dateLabel:formatDateOnly(product.expiryDate), label:daysLeft === 0 ? 'Expired hari ini' : `H-${daysLeft}`, rank:1 };
+    }
+    if (daysLeft <= alertDays) {
+        return { hasExpiry:true, status:'warning', daysLeft, alertDays, dateLabel:formatDateOnly(product.expiryDate), label:`H-${daysLeft}`, rank:2 };
+    }
+    return { hasExpiry:true, status:'safe', daysLeft, alertDays, dateLabel:formatDateOnly(product.expiryDate), label:`H-${daysLeft}`, rank:3 };
+}
+
+function expiryBadge(info) {
+    if(info.status === 'expired') return '<span class="badge badge-red">EXPIRED</span>';
+    if(info.status === 'critical') return '<span class="badge badge-red">KRITIS</span>';
+    if(info.status === 'warning') return '<span class="badge badge-yellow">SEGERA EXPIRED</span>';
+    if(info.status === 'safe') return '<span class="badge badge-green">AMAN</span>';
+    return '<span class="badge badge-blue">BELUM DIATUR</span>';
+}
+
+function expiryDaysText(info) {
+    if(info.status === 'expired') return `${Math.abs(info.daysLeft)} hari setelah expired`;
+    if(info.daysLeft === 0) return 'Expired hari ini';
+    return `${info.daysLeft} hari lagi`;
+}
+
+function getExpiryRiskProducts() {
+    return products
+        .map(p => ({product:p, info:expiryInfo(p)}))
+        .filter(x => x.product.stock > 0 && x.info.hasExpiry && ['expired','critical','warning'].includes(x.info.status))
+        .sort((a,b) => (a.info.daysLeft - b.info.daysLeft));
+}
+
+function renderExpirySummary(targetId = 'produk-expiry-summary') {
+    const el = document.getElementById(targetId);
+    if(!el) return;
+    const active = products.filter(p => p.expiryDate);
+    const expired = active.filter(p => expiryInfo(p).status === 'expired');
+    const critical = active.filter(p => expiryInfo(p).status === 'critical');
+    const warning = active.filter(p => expiryInfo(p).status === 'warning');
+    const safe = active.filter(p => expiryInfo(p).status === 'safe');
+    const unset = products.filter(p => !p.expiryDate);
+    el.innerHTML = `
+        <span class="badge badge-red">${expired.length} Expired</span>
+        <span class="badge badge-red">${critical.length} Kritis ≤ 7 Hari</span>
+        <span class="badge badge-yellow">${warning.length} Akan Expired</span>
+        <span class="badge badge-green">${safe.length} Aman</span>
+        <span class="badge badge-blue">${unset.length} Belum Diatur</span>`;
+}
+
+// ══════════════════════════════════════════
 //  PRODUK (CRUD & EXCEL)
 // ══════════════════════════════════════════
 function renderProducts() {
-    const q = document.getElementById('search-produk').value.toLowerCase();
+    const q = (document.getElementById('search-produk')?.value || '').toLowerCase();
+    const filter = document.getElementById('filter-expiry-produk')?.value || 'all';
     const tbody = document.getElementById('tbody-produk');
     tbody.innerHTML = '';
-    
-    const filtered = products.filter(p => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
-    
+
+    let filtered = products.filter(p =>
+        String(p.name || '').toLowerCase().includes(q) || String(p.code || '').toLowerCase().includes(q)
+    );
+
+    filtered = filtered.filter(p => {
+        if(filter === 'all') return true;
+        return expiryInfo(p).status === filter;
+    });
+
+    renderExpirySummary();
+
     if(filtered.length === 0){
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--txtm); font-weight:600; padding:30px;">Katalog barang tidak ditemukan di rak digital manapun.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color:var(--txtm); font-weight:600; padding:30px;">Katalog barang tidak ditemukan pada filter yang dipilih.</td></tr>';
         return;
     }
+
+    filtered.sort((a,b) => {
+        const ea = expiryInfo(a), eb = expiryInfo(b);
+        const rankDiff = (ea.rank ?? 4) - (eb.rank ?? 4);
+        if(rankDiff !== 0) return rankDiff;
+        if(ea.daysLeft !== null && eb.daysLeft !== null) return ea.daysLeft - eb.daysLeft;
+        return String(a.name || '').localeCompare(String(b.name || ''));
+    });
 
     filtered.forEach(p => {
         const minStockVal = p.minStock !== undefined ? p.minStock : 5;
         const stockStyle = p.stock <= minStockVal ? 'background:var(--red-lt); color:var(--red-brand); font-weight:800; padding:4px 10px; border-radius:12px; border:1px solid #fecaca;' : 'font-weight:800; color:var(--blue-dk);';
+        const ex = expiryInfo(p);
+        const expiryStyle = ex.status === 'expired' || ex.status === 'critical' ? 'color:var(--red-brand);' : (ex.status === 'warning' ? 'color:#a16207;' : 'color:var(--green-dk);');
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><code style="background:var(--surf3); padding:4px 8px; border-radius:6px; font-weight:700;">${p.code}</code></td>
@@ -1334,6 +1485,11 @@ function renderProducts() {
             <td class="text-right" style="color:var(--txt2);">${rp(p.basePrice)}</td>
             <td class="text-right" style="font-weight:800; color:var(--blue-brand); font-size:15px;">${rp(p.price)}</td>
             <td class="text-center"><span style="${stockStyle}">${p.stock}</span> <div style="color:var(--txtm); font-size:10px; margin-top:2px;">Batas: ${minStockVal}</div></td>
+            <td class="text-center expiry-cell">
+                <div class="expiry-main" style="${expiryStyle}">${ex.dateLabel}</div>
+                <div class="expiry-sub" style="${expiryStyle}">${ex.hasExpiry ? expiryDaysText(ex) : 'Atur tanggal expired'}</div>
+                <div style="margin-top:4px;">${expiryBadge(ex)}</div>
+            </td>
             <td class="text-center">
                 <button class="btn btn-sm btn-outline" onclick="editProduk('${p.id}')">✏️ Ubah Atribut</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteProduk('${p.id}')">🗑️ Hapus SKU</button>
@@ -1354,6 +1510,8 @@ function editProduk(id) {
     document.getElementById('p-price').value = p.price;
     document.getElementById('p-stock').value = p.stock;
     document.getElementById('p-min-stock').value = p.minStock !== undefined ? p.minStock : 5;
+    document.getElementById('p-expiry-date').value = p.expiryDate || '';
+    document.getElementById('p-expiry-alert-days').value = p.expiryAlertDays !== undefined ? p.expiryAlertDays : 30;
     document.getElementById('m-prod-title').textContent = 'Pembaruan Detail Katalog SKU';
     openModal('modal-produk');
 }
@@ -1376,6 +1534,8 @@ function saveProduk(e) {
         price: Number(document.getElementById('p-price').value),
         stock: Number(document.getElementById('p-stock').value),
         minStock: Number(document.getElementById('p-min-stock').value),
+        expiryDate: document.getElementById('p-expiry-date').value || '',
+        expiryAlertDays: Math.max(1, Number(document.getElementById('p-expiry-alert-days').value) || 30),
         updatedAt: getLocalDateISO()
     };
 
@@ -1406,14 +1566,33 @@ function deleteProduk(id) {
 
 function downloadTemplateExcel() {
     const ws_data = [
-        ["Kode", "Nama Produk", "Kategori", "Harga Beli", "Harga Jual", "Stok", "Stok Minimal"],
-        ["ITM-M001", "Chitato Mie Goreng Instan Jumbo", "Makanan Kering", 2500, 3500, 100, 10],
-        ["ITM-D002", "Pocari Sweat Kaleng 330ml", "Minuman Dingin", 5500, 7500, 48, 5]
+        ["Kode", "Nama Produk", "Kategori", "Harga Beli", "Harga Jual", "Stok", "Stok Minimal", "Tanggal Expired", "Alert Expired (Hari)"],
+        ["ITM-M001", "Chitato Mie Goreng Instan Jumbo", "Makanan Kering", 2500, 3500, 100, 10, "2027-06-30", 30],
+        ["ITM-D002", "Pocari Sweat Kaleng 330ml", "Minuman Dingin", 5500, 7500, 48, 5, "2026-12-31", 30]
     ];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Format_Impor_Batch");
     XLSX.writeFile(wb, "Template_Gudang_UMart.xlsx");
+}
+
+function normalizeExcelDate(value) {
+    if(value === null || value === undefined || value === '') return '';
+    if(value instanceof Date && !Number.isNaN(value.getTime())) {
+        const y = value.getFullYear();
+        const m = String(value.getMonth()+1).padStart(2,'0');
+        const d = String(value.getDate()).padStart(2,'0');
+        return `${y}-${m}-${d}`;
+    }
+    if(typeof value === 'number' && typeof XLSX !== 'undefined' && XLSX.SSF) {
+        const parsed = XLSX.SSF.parse_date_code(value);
+        if(parsed && parsed.y) return `${parsed.y}-${String(parsed.m).padStart(2,'0')}-${String(parsed.d).padStart(2,'0')}`;
+    }
+    const s = String(value).trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);
+    if(!Number.isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return '';
 }
 
 function handleImportExcel(e) {
@@ -1452,6 +1631,8 @@ function handleImportExcel(e) {
                     const hJual = Number(row["Harga Jual"]) || 0;
                     const stok = Number(row["Stok"]) || 0;
                     const minStok = Number(row["Stok Minimal"]) || 5;
+                    const expiryDate = normalizeExcelDate(row["Tanggal Expired"]);
+                    const expiryAlertDays = Math.max(1, Number(row["Alert Expired (Hari)"]) || 30);
                     
                     products.push({
                         id: genId('p'),
@@ -1462,6 +1643,8 @@ function handleImportExcel(e) {
                         price: hJual,
                         stock: stok,
                         minStock: minStok,
+                        expiryDate,
+                        expiryAlertDays,
                         createdAt: getLocalDateISO(),
                         updatedAt: getLocalDateISO()
                     });
@@ -2514,6 +2697,9 @@ function renderDashboard() {
     document.getElementById('dash-today-count').textContent = todayTx.length;
     document.getElementById('dash-prod-count').textContent = products.length;
     document.getElementById('dash-member-count').textContent = members.length;
+    const expiryRisk = getExpiryRiskProducts();
+    document.getElementById('dash-expiry-count').textContent = expiryRisk.length;
+    renderDashboardExpiry();
 
     const bannerTitle = document.getElementById('dash-banner-title');
     const bannerText = document.getElementById('dash-banner-text');
@@ -2529,6 +2715,43 @@ function renderDashboard() {
     } else {
         bannerText.innerHTML = `Pekerjaan yang bagus! Sepanjang hari ini, mesin Anda telah memproses <b>${todayTx.length} pesanan</b> yang mengamankan omset kasar senilai <b>${rp(sales)}</b>. Mari dorong pencapaian target profitabilitas ke angka yang lebih maksimal lagi.`;
     }
+}
+
+function renderDashboardExpiry() {
+    const tbody = document.getElementById('dash-expiry-tbody');
+    const summary = document.getElementById('dash-expiry-summary');
+    if(!tbody) return;
+
+    const allWithExpiry = products.filter(p => p.expiryDate);
+    const expired = allWithExpiry.filter(p => expiryInfo(p).status === 'expired');
+    const critical = allWithExpiry.filter(p => expiryInfo(p).status === 'critical');
+    const warning = allWithExpiry.filter(p => expiryInfo(p).status === 'warning');
+    if(summary) {
+        summary.innerHTML = `
+            <span class="badge badge-red">${expired.length} Expired</span>
+            <span class="badge badge-red">${critical.length} Kritis ≤ 7 Hari</span>
+            <span class="badge badge-yellow">${warning.length} Akan Expired</span>`;
+    }
+
+    const risk = getExpiryRiskProducts().slice(0,10);
+    tbody.innerHTML = '';
+    if(risk.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="expiry-empty">Tidak ada produk berstok yang masuk periode warning expired. Gudang untuk sementara tidak sedang mencoba menggagalkan Anda.</td></tr>';
+        return;
+    }
+
+    risk.forEach(({product:p, info:ex}) => {
+        const expiryStyle = ex.status === 'expired' || ex.status === 'critical' ? 'color:var(--red-brand);' : 'color:#a16207;';
+        tbody.innerHTML += `
+            <tr>
+                <td><b>${p.name}</b><div style="font-size:10px;color:var(--txtm);margin-top:2px;">${p.code}</div></td>
+                <td><span class="badge badge-yellow">${p.category || 'TIDAK TERKATEGORI'}</span></td>
+                <td class="text-center"><b>${p.stock}</b></td>
+                <td class="text-center" style="${expiryStyle};font-weight:800;">${ex.dateLabel}</td>
+                <td class="text-center" style="${expiryStyle};font-weight:800;">${expiryDaysText(ex)}</td>
+                <td class="text-center">${expiryBadge(ex)}</td>
+            </tr>`;
+    });
 }
 
 async function refreshDashboardFromSheet(showToast = true) {
