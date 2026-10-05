@@ -30,7 +30,7 @@ input,button,select,textarea{font:inherit;outline:none}
 
 /* SIDEBAR */
 .sidebar{width:240px;background:var(--blue-brand);color:white;display:flex;flex-direction:column;transition:all .3s;box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 10;}
-.sidebar-header{padding:20px;font-size:20px;font-weight:800;letter-spacing:0.5px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;gap:10px; background:var(--blue-dk)}
+.sidebar-header{padding:16px 18px;min-height:82px;font-size:20px;font-weight:800;letter-spacing:0.5px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;gap:10px;background:#fff}
 .sidebar-header span {color: var(--yellow-brand);}
 .sidebar-nav{flex:1;padding:15px 12px;overflow-y:auto}
 .nav-item{display:flex;align-items:center;padding:12px 15px;color:rgba(255,255,255,0.8);text-decoration:none;border-radius:var(--rad);margin-bottom:8px;cursor:pointer;transition:all .2s;font-weight:600; border-left: 4px solid transparent;}
@@ -199,9 +199,10 @@ tr:hover td{background:var(--blue-lt)}
 }
 .login-box::before {content:''; position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--yellow-brand); border-radius:50%; z-index:0; opacity:0.2;}
 .login-content {position:relative; z-index:1;}
-.login-logo {display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom: 10px;}
-.login-logo-icon {background:var(--red-brand); color:white; width:45px; height:45px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; transform:rotate(-5deg);}
-.login-title {font-size: 28px; font-weight: 800; color: var(--blue-brand); letter-spacing:-0.5px;}
+.login-logo {display:flex; align-items:center; justify-content:center; margin-bottom: 14px; min-height:72px;}
+.login-logo-space {width:220px; height:72px; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:12px; padding:8px 14px; border:1px solid var(--bdr); box-shadow:var(--shas);}
+.login-logo-space img {display:block; max-width:190px; max-height:58px; width:auto; height:auto; object-fit:contain;}
+.login-logo-fallback {display:none; color:#1f6b3a; font-size:17px; font-weight:800; letter-spacing:.3px;}
 .login-subtitle {font-size: 14px; color: var(--txt2); margin-bottom: 30px; font-weight:600;}
 
 /* HIDDEN CLASS */
@@ -233,8 +234,10 @@ tr:hover td{background:var(--blue-lt)}
     <div class="login-box">
         <div class="login-content">
             <div class="login-logo">
-                <div class="login-logo-icon">U</div>
-                <div class="login-title">UMart <span style="color:var(--yellow-brand)">POS</span></div>
+                <div class="login-logo-space">
+                    <img src="assets/UMart_Logo.png" alt="UMart" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <div class="login-logo-fallback">UMART</div>
+                </div>
             </div>
             <div class="login-subtitle">Sistem Kasir & Manajemen Toko Terpadu</div>
             <form id="form-login" onsubmit="handleLogin(event)">
@@ -258,19 +261,19 @@ tr:hover td{background:var(--blue-lt)}
         <div class="sidebar-header" title="Ubudiyah Mart">
             <img
                 id="brand-logo"
-                src="UMart_Logo.png"
-                alt="Ubudiyah Mart"
+                src="assets/UMart_Logo.png"
+                alt="UMart"
                 style="display:block; max-width:170px; max-height:46px; width:auto; height:auto; object-fit:contain;"
                 onerror="this.style.display='none'; document.getElementById('brand-logo-fallback').style.display='block';"
             >
             <div id="brand-logo-fallback"
-                 style="display:none; color:white; font-size:16px; font-weight:800; letter-spacing:.3px;">
-                UBUDIYAH MART
+                 style="display:none; color:#1f6b3a; font-size:16px; font-weight:800; letter-spacing:.3px;">
+                UMART
             </div>
         </div>
         <nav class="sidebar-nav" id="sidebar-nav">
             <div style="font-size:11px; color:rgba(255,255,255,0.5); font-weight:700; margin:10px 0 5px 15px; text-transform:uppercase;">Menu Utama</div>
-            <a class="nav-item admin-only" data-target="dashboard" onclick="switchView('dashboard', this)">
+            <a class="nav-item" data-target="dashboard" onclick="switchView('dashboard', this)">
                 <span class="nav-icon">📊</span>Dashboard
             </a>
             <a class="nav-item" data-target="kasir" onclick="switchView('kasir', this)">
@@ -964,6 +967,8 @@ let currentUser = LS.get('currentUser') || null;
 let products = LS.get('products') || [];
 let members = LS.get('members') || [];
 let transactions = LS.get('transactions') || [];
+let dashboardTransactions = null;
+let dashboardRefreshTimer = null;
 let qrisData = LS.get('qris') || {name: '', image: ''};
 
 /* ============================================================
@@ -1138,7 +1143,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('active')
 //  NAVIGATION
 // ══════════════════════════════════════════
 function switchView(viewId, navEl) {
-    if(currentUser.role === 'kasir' && ['dashboard', 'produk', 'laporan', 'pengaturan', 'akuntansi'].includes(viewId)) {
+    if(currentUser.role === 'kasir' && ['produk', 'laporan', 'pengaturan', 'akuntansi'].includes(viewId)) {
         toast("Otoritas Terbatas! Area ini diblokir untuk level Kasir Operator.", true);
         return;
     }
@@ -2379,6 +2384,26 @@ function exportAkuntansiExcel() {
 // ══════════════════════════════════════════
 //  DASHBOARD (COMMUNICATIVE BANNER)
 // ══════════════════════════════════════════
+function isTransactionToday(dateValue) {
+    if(!dateValue) return false;
+    const today = getLocalDateISO().slice(0,10);
+    const raw = String(dateValue).trim();
+
+    // Jika Spreadsheet mengirim tanggal murni YYYY-MM-DD, bandingkan langsung.
+    // Jika mengirim ISO timestamp (mis. ...T00:00:00.000Z), konversikan ke WIB
+    // terlebih dahulu agar transaksi tidak bergeser satu hari karena timezone.
+    if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw === today;
+
+    const parsed = new Date(dateValue);
+    if(Number.isNaN(parsed.getTime())) return false;
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone:'Asia/Jakarta', year:'numeric', month:'2-digit', day:'2-digit'
+    }).formatToParts(parsed);
+    const p = {};
+    parts.forEach(pt => p[pt.type] = pt.value);
+    return `${p.year}-${p.month}-${p.day}` === today;
+}
+
 function normalizeSheetTransactions(payload) {
     let rows = payload;
     if(payload && !Array.isArray(payload)) rows = payload.transactions || payload.data || payload.rows || [];
@@ -2437,6 +2462,7 @@ async function fetchTransactionsFromSheet() {
         }
 
         const remoteTransactions = normalizeSheetTransactions(payload);
+        dashboardTransactions = remoteTransactions;
 
         const unsyncedLocal = transactions.filter(t => !t.synced);
         const remoteKeys = new Set(remoteTransactions.map(t => String(t.nota || t.id)));
@@ -2450,17 +2476,20 @@ async function fetchTransactionsFromSheet() {
         return remoteTransactions;
     } catch(error) {
         console.warn('Dashboard gagal mengambil data Google Sheets:', error);
+        dashboardTransactions = null;
         return null;
     }
 }
 
 function renderDashboard() {
-    const today = getLocalDateISO().split('T')[0];
+    // Jika Google Sheets berhasil dibaca, dashboard memakai data spreadsheet
+    // sebagai sumber utama. LocalStorage hanya menjadi fallback saat offline/API gagal.
+    const sourceTransactions = Array.isArray(dashboardTransactions) ? dashboardTransactions : transactions;
     let sales = 0;
-    const todayTx = transactions.filter(t => String(t.date).startsWith(today));
+    const todayTx = sourceTransactions.filter(t => isTransactionToday(t.date));
     todayTx.forEach(t => sales += Number(t.total) || 0);
 
-    const recent = [...transactions].filter(t => t.date).sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0,10);
+    const recent = [...sourceTransactions].filter(t => t.date).sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0,10);
     const tbody = document.getElementById('dash-tx-tbody');
     tbody.innerHTML = '';
 
@@ -2502,12 +2531,22 @@ function renderDashboard() {
     }
 }
 
-async function refreshDashboardFromSheet() {
+async function refreshDashboardFromSheet(showToast = true) {
     const remote = await fetchTransactionsFromSheet();
     renderDashboard();
-    if(remote) {
+    if(remote && showToast) {
         toast(`Dashboard diperbarui dari ${remote.length} transaksi Google Sheets.`);
     }
+    return remote;
+}
+
+function startDashboardAutoRefresh() {
+    clearInterval(dashboardRefreshTimer);
+    dashboardRefreshTimer = setInterval(() => {
+        if(currentUser && document.getElementById('view-dashboard').classList.contains('active') && navigator.onLine) {
+            refreshDashboardFromSheet(false);
+        }
+    }, 60000);
 }
 
 // ══════════════════════════════════════════
@@ -2547,7 +2586,10 @@ function initApp() {
     
     applyRoleRestrictions();
     updateSyncUI();
-    if(currentUser.role === 'admin') refreshDashboardFromSheet(); 
+    if(currentUser.role === 'admin' || currentUser.role === 'kasir') {
+        refreshDashboardFromSheet();
+        startDashboardAutoRefresh();
+    } 
 }
 
 if(currentUser) {
